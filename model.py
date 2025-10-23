@@ -1,60 +1,66 @@
-import fitz 
 import spacy
+import subprocess
+import importlib
+import openai
 import json
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 
-nlp = spacy.load("en_core_web_sm")
-embed_model = SentenceTransformer("all-MiniLM-L6-v2")
+# --- Load or auto-download spaCy model ---
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"])
+    importlib.invalidate_caches()
+    nlp = spacy.load("en_core_web_sm")
 
-def extract_text_from_pdf(pdf_file):
-    """Extract text from uploaded PDF file."""
-    text = ""
-    with fitz.open(stream=pdf_file.read(), filetype="pdf") as pdf:
-        for page in pdf:
-            text += page.get_text()
-    return text
 
-def extract_entities(resume_text):
-    """Extract simple skill-like nouns from resume."""
-    doc = nlp(resume_text)
-    skills = []
-    for token in doc:
-        if token.pos_ in ["NOUN", "PROPN"] and len(token.text) > 2:
-            skills.append(token.text)
-    return list(set(skills))
+def extract_entities(text):
+    """Extract skills, education, and experience keywords from resume text."""
+    doc = nlp(text)
+    entities = {
+        "skills": [],
+        "education": [],
+        "experience": [],
+    }
 
-def find_best_job(resume_text, job_dataset):
-    """Find the best matching job using cosine similarity."""
-    resume_embedding = embed_model.encode(resume_text)
-    similarities = []
+    for ent in doc.ents:
+        if ent.label_ in ["ORG", "NORP"]:
+            entities["education"].append(ent.text)
+        elif ent.label_ in ["WORK_OF_ART", "PRODUCT"]:
+            entities["skills"].append(ent.text)
+        elif ent.label_ in ["DATE"]:
+            entities["experience"].append(ent.text)
+
+    return entities
+
+
+def analyze_resume(resume_text, job_dataset):
+    """Find best matching job and suggest related skills."""
+    entities = extract_entities(resume_text)
+
+    best_job = None
+    best_score = 0
+
     for job in job_dataset:
-        job_text = " ".join(job["skills"]) + " " + job["role"]
-        job_embedding = embed_model.encode(job_text)
-        sim = cosine_similarity([resume_embedding], [job_embedding])[0][0]
-        similarities.append((job["role"], sim))
-    similarities.sort(key=lambda x: x[1], reverse=True)
-    return similarities[0]
+        score = 0
+        for skill in entities["skills"]:
+            if skill.lower() in job["skills"].lower():
+                score += 1
+        if score > best_score:
+            best_score = score
+            best_job = job
 
-def recommend_skills(job, resume_skills):
-    """Suggest missing skills to learn."""
-    missing = [s for s in job["skills"] if s.lower() not in [r.lower() for r in resume_skills]]
-    return missing
+    # Fallback if no match found
+    if not best_job:
+        best_job = job_dataset[0]
 
-def analyze_resume(pdf_file, job_dataset_path="data/jobs.json"):
-    """Full pipeline: extract text → match job → recommend skills."""
-    with open(job_dataset_path, "r") as f:
-        job_dataset = json.load(f)
-    
-    text = extract_text_from_pdf(pdf_file)
-    extracted_skills = extract_entities(text)
-    best_job = find_best_job(text, job_dataset)
-    matched_job = next(job for job in job_dataset if job["role"] == best_job[0])
-    missing_skills = recommend_skills(matched_job, extracted_skills)
+    # Suggest new skills
+    suggested_skills = [
+        skill for skill in best_job["skills"].split(", ")
+        if skill.lower() not in [s.lower() for s in entities["skills"]]
+    ]
 
     return {
-        "best_job": best_job[0],
-        "confidence": round(best_job[1]*100, 2),
-        "skills_to_learn": missing_skills,
-        "extracted_skills": extracted_skills
+        "best_job": best_job["role"],
+        "required_skills": best_job["skills"],
+        "suggested_skills": suggested_skills,
     }
