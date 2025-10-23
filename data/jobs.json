@@ -1,0 +1,22 @@
+[
+  {
+    "role": "Data Scientist",
+    "skills": ["Python", "Machine Learning", "Pandas", "Numpy", "SQL", "Statistics"]
+  },
+  {
+    "role": "Frontend Developer",
+    "skills": ["HTML", "CSS", "JavaScript", "React", "Git", "REST API"]
+  },
+  {
+    "role": "Backend Developer",
+    "skills": ["Python", "Django", "Flask", "SQL", "APIs", "Docker"]
+  },
+  {
+    "role": "Cloud Engineer",
+    "skills": ["AWS", "Azure", "Kubernetes", "Docker", "Terraform", "Linux"]
+  },
+  {
+    "role": "Data Analyst",
+    "skills": ["Excel", "PowerBI", "SQL", "Python", "Tableau", "Statistics"]
+  }
+]
