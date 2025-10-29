@@ -1,0 +1,8 @@
+{
+  "Programming": ["python", "java", "c++", "javascript", "typescript", "sql"],
+  "Data Science": ["machine learning", "deep learning", "statistics", "pandas", "numpy", "tensorflow", "pytorch"],
+  "Web Development": ["html", "css", "react", "node.js", "express", "django", "flask"],
+  "Cloud": ["aws", "azure", "docker", "kubernetes", "devops", "gcp"],
+  "Cybersecurity": ["network security", "penetration testing", "linux", "firewall", "risk assessment"],
+  "Soft Skills": ["communication", "leadership", "problem solving", "teamwork", "critical thinking"]
+}
